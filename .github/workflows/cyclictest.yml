@@ -1,0 +1,38 @@
+name: Cyclictest Daily Run
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Runs daily at 00:00 UTC
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  test-cyclictest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [A, B, C, D]  # Define platform names
+
+    steps:
+      - name: 🛠 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🏗 Set Up Environment
+        run: |
+          sudo apt update
+          sudo apt install -y rt-tests
+
+      - name: 🚀 Run Cyclictest
+        run: |
+          echo "Running Cyclictest on Platform ${{ matrix.platform }}..."
+          sudo cyclictest -m -n -a 0 -q -h 100 -p 90 -l 100000 | tee cyclictest_${{ matrix.platform }}.log
+
+      - name: 📤 Upload Test Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: cyclictest-results-${{ matrix.platform }}
+          path: cyclictest_${{ matrix.platform }}.log
+
+      - name: ❌ Notify on Failure
+        if: failure()
+        run: echo "❗Cyclictest failed on ${{ matrix.platform }}. Check logs in GitHub Actions."
+
